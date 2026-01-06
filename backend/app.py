@@ -9,6 +9,8 @@ import sqlite3
 import os
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -16,6 +18,10 @@ app = Flask(__name__)
 CORS(app)
 
 client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+# Rate limiting
+request_tracker = defaultdict(list)
+MAX_REQUESTS_PER_IP = 100
 
 SCHEMA = """
 Database Schema for CourtIQ (Tennis Club Analytics):
@@ -60,15 +66,29 @@ TABLE: bookings
 Current date context: 2026-01-02
 """
 
-def get_sql_from_question(question):
-    """Convert natural language to SQL using Claude"""
-    prompt = f"""You are a SQL expert for a tennis club database. Generate 
-ONLY the SQL query needed to answer the question. No explanation, no 
-markdown, just the query.
+
+def get_sql_from_question(question, conversation_history=None):
+    """Convert natural language to SQL using Claude with conversation context"""
+
+    # Build context from conversation history
+    # Build context from conversation history
+    context = ""
+    if conversation_history:
+        context = "\n\nRecent conversation for context (maintain same formatting style):\n"
+        for msg in conversation_history[-3:]:  # Last 3 exchanges
+            if msg.get('question'):
+                context += f"User asked: {msg['question']}\n"
+            if msg.get('answer'):
+                context += f"Assistant answered: {msg['answer'][:300]}...\n"  # Include more of answer to capture format
+
+    prompt = f"""You are a SQL expert for a tennis club database. Generate ONLY the SQL query needed to answer the question. No explanation, no markdown, just the query.
 
 {SCHEMA}
+{context}
 
-User Question: {question}
+Current question: {question}
+
+IMPORTANT: If the previous response used a specific format (like a list), maintain that same format for follow-up questions.
 
 Return ONLY the SQL query."""
 
@@ -77,14 +97,21 @@ Return ONLY the SQL query."""
         max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
-    
+
     sql_query = message.content[0].text.strip()
-    
+
     if sql_query.startswith("```"):
         sql_query = sql_query.split("\n", 1)[1]
         sql_query = sql_query.rsplit("```", 1)[0]
-    
+
     return sql_query.strip()
+
+
+
+
+
+
+
 
 def execute_query(sql_query):
     """Execute SQL against database"""
@@ -113,11 +140,17 @@ val in row) + "\n"
     
     return output
 
+
 def get_natural_language_answer(question, sql_query, results, column_names):
     """Generate natural language answer from results"""
     results_text = format_results(results, column_names)
 
     prompt = f"""Based on the SQL results, provide a clear answer to the user's question.
+    
+    IMPORTANT: 
+    - Respond in the SAME LANGUAGE the user asked their question in (English, Spanish, etc.).
+    - Use plain text only - NO markdown, NO asterisks, NO special formatting
+    - Write naturally without bold, italics, or other formatting symbols
 
 User Question: {question}
 
@@ -126,7 +159,10 @@ SQL Query: {sql_query}
 Results:
 {results_text}
 
-Provide a conversational answer with specific numbers and names. Use plain text only - no markdown, no asterisks, no special formatting. Write naturally as if speaking to someone."""
+Provide a conversational, natural answer in the user's language. Speak directly and simply - avoid technical phrases. 
+
+If presenting multiple items, format it clearly as a bulleted list with line breaks between items. Use proper spacing to make it easy to read."""
+
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -141,12 +177,105 @@ def health():
     """Health check endpoint"""
     return jsonify({"status": "healthy"})
 
+
+@app.route('/stats/summary', methods=['GET'])
+def get_summary_stats():
+    """Get quick summary stats for dashboard cards"""
+    try:
+        conn = sqlite3.connect('courtiq.db')
+        cursor = conn.cursor()
+
+        # Active members
+        cursor.execute('SELECT COUNT(*) FROM members WHERE status="active"')
+        active_members = cursor.fetchone()[0]
+
+        # Revenue this month
+        cursor.execute('''
+                       SELECT COALESCE(SUM(price), 0)
+                       FROM bookings
+                       WHERE status = "completed"
+                         AND strftime('%Y-%m', booking_date) = strftime('%Y-%m', 'now')
+                       ''')
+        revenue_this_month = cursor.fetchone()[0]
+
+        # Bookings today
+        cursor.execute('''
+                       SELECT COUNT(*)
+                       FROM bookings
+                       WHERE DATE (booking_date) = DATE ('now')
+                       ''')
+        bookings_today = cursor.fetchone()[0]
+
+        conn.close()
+
+        return jsonify({
+            "active_members": active_members,
+            "revenue_this_month": round(revenue_this_month, 2),
+            "bookings_today": bookings_today
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/revenue-chart', methods=['GET'])
+def get_revenue_chart():
+    """Get revenue data for chart with configurable time period"""
+    try:
+        # Get time period from query parameter (default: 30 days)
+        days = request.args.get('days', 30, type=int)
+
+        conn = sqlite3.connect('courtiq.db')
+        cursor = conn.cursor()
+
+        cursor.execute('''
+                       SELECT
+                           DATE (booking_date) as date, SUM (CASE WHEN status='completed' THEN price ELSE 0 END) as revenue
+                       FROM bookings
+                       WHERE booking_date >= DATE ('now', '-' || ? || ' days')
+                       GROUP BY DATE (booking_date)
+                       ORDER BY date
+                       ''', (days,))
+
+        results = cursor.fetchall()
+        conn.close()
+
+        data = [{"date": row[0], "revenue": round(row[1], 2)} for row in results]
+
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 @app.route('/ask', methods=['POST'])
 def ask_question():
     """Main endpoint for processing questions"""
     try:
         data = request.json
         question = data.get('question', '').strip()
+        conversation_history = data.get('history', [])
+        # Rate limiting check
+        client_ip = request.remote_addr
+        now = datetime.now()
+
+        # Clean old requests (older than 1 hour)
+        request_tracker[client_ip] = [
+            req_time for req_time in request_tracker[client_ip]
+            if now - req_time < timedelta(hours=1)
+        ]
+
+        # Check if limit exceeded
+        if len(request_tracker[client_ip]) >= MAX_REQUESTS_PER_IP:
+            return jsonify({
+                "question": question,
+                "sql": None,
+                "answer": "You've reached the demo limit of 5 questions per hour. This helps manage API costs. If you'd like to see more or discuss this project, feel free to connect with me on LinkedIn!",
+                "results": None
+            })
+
+        # Track this request
+        request_tracker[client_ip].append(now)
 
         if not question:
             return jsonify({"error": "No question provided"}), 400
@@ -163,16 +292,18 @@ def ask_question():
             })
         
         # Generate SQL
-        sql_query = get_sql_from_question(question)
-        
+        sql_query = get_sql_from_question(question, conversation_history)
+
         # Execute query
         results, column_names, error = execute_query(sql_query)
-        
+
         if error:
             return jsonify({
-                "error": f"SQL execution failed: {error}",
-                "sql": sql_query
-            }), 500
+                "question": question,
+                "sql": None,
+                "answer": "I couldn't understand that question. Please ask about members, bookings, coaches, courts, or revenue. For example: 'How many active members do we have?' or 'What's our revenue this month?'",
+                "results": None
+            })
         
         # Generate answer
         answer = get_natural_language_answer(question, sql_query, results, 
