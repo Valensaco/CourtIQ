@@ -36,7 +36,7 @@ const scrollToBottom = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://127.0.0.1:5000/ask', {
+      const response = await axios.post('https://courtiq-6pe7.onrender.com', {
   question: question,
   history: messages.map(msg => ({
     question: msg.type === 'user' ? msg.text : null,
