@@ -12,9 +12,12 @@ from dotenv import load_dotenv
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+from flask import Flask, request, jsonify, send_from_directory
+import os
+
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 CORS(app)
 
 client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
@@ -636,6 +639,14 @@ def get_stats():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

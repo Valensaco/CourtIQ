@@ -3,7 +3,7 @@ import axios from 'axios'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './Admin.css';
 
-const API_BASE = 'https://courtiq-6pe7.onrender.com';
+const API_BASE = '';
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('dashboard');
