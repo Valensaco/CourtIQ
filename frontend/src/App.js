@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function App() {
   const [question, setQuestion] = useState('');
@@ -9,13 +10,13 @@ function App() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-const scrollToBottom = () => {
-  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-};
-
-
-
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const exampleQuestions = [
     "Which members have the highest cancellation rate?",
@@ -30,21 +31,19 @@ const scrollToBottom = () => {
 
     if (!question.trim()) return;
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
     const userMessage = {type: 'user', text: question};
     setMessages(prev => [...prev, userMessage]);
     setQuestion('');
     setLoading(true);
 
     try {
-      const response = await axios.post('/ask', {
-  question: question,
-  history: messages.map(msg => ({
-    question: msg.type === 'user' ? msg.text : null,
-    answer: msg.type === 'assistant' ? msg.text : null
-  }))
-});
+      const response = await axios.post(`${API_URL}/ask`, {
+        question: question,
+        history: messages.map(msg => ({
+          question: msg.type === 'user' ? msg.text : null,
+          answer: msg.type === 'assistant' ? msg.text : null
+        }))
+      });
 
       const assistantMessage = {
         type: 'assistant',
@@ -78,13 +77,9 @@ const scrollToBottom = () => {
           <h1>🎾 CourtIQ</h1>
           <p>AI Assistant for Tennis Club Analytics</p>
           <a href="/admin" style={{color: 'white', marginTop: '10px', display: 'inline-block', textDecoration: 'underline'}}>
-    Admin Panel →
-  </a>
+            Admin Panel →
+          </a>
         </header>
-
-
-
-
 
         <div className="chat-container">
           {messages.length === 0 ? (
@@ -120,7 +115,7 @@ const scrollToBottom = () => {
                     <span className="dots">...</span>
                   </div>
                 </div>
-             )}
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
