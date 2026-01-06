@@ -1,0 +1,124 @@
+.landing {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.landing-container {
+  max-width: 1000px;
+  width: 100%;
+}
+
+.landing-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 60px;
+}
+
+.landing-header h1 {
+  font-size: 4rem;
+  margin: 0 0 20px 0;
+  text-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.landing-header p {
+  font-size: 1.5rem;
+  opacity: 0.95;
+}
+
+.landing-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.landing-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  text-decoration: none;
+  color: #333;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.landing-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.card-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.landing-card h2 {
+  margin: 0 0 15px 0;
+  font-size: 2rem;
+  color: #667eea;
+}
+
+.landing-card p {
+  color: #666;
+  margin: 0 0 30px 0;
+  line-height: 1.6;
+}
+
+.landing-card button {
+  padding: 15px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.landing-card button:hover {
+  transform: scale(1.05);
+}
+
+.landing-features {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  color: white;
+}
+
+.feature {
+  text-align: center;
+}
+
+.feature span {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.feature p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .landing-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-features {
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .landing-header h1 {
+    font-size: 2.5rem;
+  }
+}
