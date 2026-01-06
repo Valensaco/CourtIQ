@@ -30,6 +30,8 @@ const scrollToBottom = () => {
 
     if (!question.trim()) return;
 
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
     const userMessage = {type: 'user', text: question};
     setMessages(prev => [...prev, userMessage]);
     setQuestion('');

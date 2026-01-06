@@ -3,7 +3,7 @@ import axios from 'axios'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './Admin.css';
 
-const API_BASE = '';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('dashboard');
