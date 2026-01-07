@@ -21,7 +21,7 @@ client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # Rate limiting
 request_tracker = defaultdict(list)
-MAX_REQUESTS_PER_IP = 5
+MAX_REQUESTS_PER_IP = 1000
 
 SCHEMA = """
 Database Schema for CourtIQ (Tennis Club Analytics):
