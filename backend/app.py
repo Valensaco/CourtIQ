@@ -171,6 +171,22 @@ def test_key():
 
 
 
+
+@app.route('/test-api', methods=['GET'])
+def test_api():
+    """Test if Anthropic API works"""
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=100,
+            messages=[{"role": "user", "content": "Say hello"}]
+        )
+        return jsonify({"status": "API works", "response": message.content[0].text})
+    except Exception as e:
+        return jsonify({"status": "API failed", "error": str(e)})
+
+
+
 @app.route('/ask', methods=['POST'])
 def ask_question():
     """Main endpoint for processing questions"""
