@@ -249,8 +249,24 @@ def ask_question():
             }
         })
 
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+        import traceback
+
+        error_details = {
+
+            "error": str(e),
+
+            "type": type(e).__name__,
+
+            "traceback": traceback.format_exc()
+
+        }
+
+        print(f"ERROR IN /ask: {error_details}")
+
+        return jsonify({"error": str(e), "details": error_details}), 500
 
 # Admin endpoints continue here...
 # (I'll give you the rest in the next message to keep it manageable)
