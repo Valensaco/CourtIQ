@@ -197,7 +197,7 @@ def ask_question():
         question = data.get('question', '').strip()
         conversation_history = data.get('history', [])
 
-        client_ip = request.remote_addr
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0]
         now = datetime.now()
 
         request_tracker[client_ip] = [

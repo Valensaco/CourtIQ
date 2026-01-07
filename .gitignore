@@ -7,7 +7,7 @@ node_modules/
 backend/__pycache__/
 
 # Database
-backend/courtiq.db
+
 
 # System files
 .DS_Store
