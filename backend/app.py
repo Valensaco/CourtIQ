@@ -21,7 +21,9 @@ client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # Rate limiting
 request_tracker = defaultdict(list)
-MAX_REQUESTS_PER_IP = 1000
+MAX_REQUESTS_PER_IP = 5
+
+
 
 SCHEMA = """
 Database Schema for CourtIQ (Tennis Club Analytics):
@@ -528,6 +530,7 @@ def delete_booking(booking_id):
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+import os
+
+port = int(os.environ.get('PORT', 10000))
+app.run(host='0.0.0.0', port=port)
