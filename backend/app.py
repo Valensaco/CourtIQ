@@ -159,6 +159,18 @@ def health():
     """Health check endpoint"""
     return jsonify({"status": "healthy"})
 
+
+@app.route('/test-key', methods=['GET'])
+def test_key():
+    """Test if API key is loaded"""
+    key = os.getenv('ANTHROPIC_API_KEY')
+    if key:
+        return jsonify({"status": "Key loaded", "key_prefix": key[:10]})
+    else:
+        return jsonify({"status": "Key NOT loaded", "all_env": list(os.environ.keys())})
+
+
+
 @app.route('/ask', methods=['POST'])
 def ask_question():
     """Main endpoint for processing questions"""
