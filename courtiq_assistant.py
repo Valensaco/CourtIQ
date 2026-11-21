@@ -72,7 +72,7 @@ User Question: {question}
 Generate a valid SQLite query that answers this question. Return ONLY the SQL query, nothing else."""
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5-5",
         max_tokens=1000,
         messages=[
             {"role": "user", "content": prompt}
@@ -141,7 +141,7 @@ Results:
 Provide a clear, conversational answer that directly addresses the question. Include specific numbers and names from the results."""
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5-5",
         max_tokens=1000,
         messages=[
             {"role": "user", "content": prompt}

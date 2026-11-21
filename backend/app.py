@@ -89,7 +89,7 @@ Current question: {question}
 Return ONLY the SQL query."""
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5-5",
         max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -103,11 +103,15 @@ Return ONLY the SQL query."""
     return sql_query.strip()
 
 def execute_query(sql_query):
-    """Execute SQL against database"""
+    """Execute SQL against the database (read-only, single SELECT statement only)"""
+    q = sql_query.strip().rstrip(';').strip()
+    if ';' in q or not q.lower().startswith(('select', 'with')):
+        return None, None, "Only a single SELECT query is allowed"
     try:
-        conn = sqlite3.connect('courtiq.db')
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'courtiq.db')
+        conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
         cursor = conn.cursor()
-        cursor.execute(sql_query)
+        cursor.execute(q)
         results = cursor.fetchall()
         column_names = [desc[0] for desc in cursor.description]
         conn.close()
@@ -149,7 +153,7 @@ Results:
 Provide a conversational, natural answer. If presenting multiple items, format as a simple list with dashes."""
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5-5",
         max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -164,14 +168,8 @@ def health():
 
 @app.route('/test-key', methods=['GET'])
 def test_key():
-    """Test if API key is loaded"""
-    key = os.getenv('ANTHROPIC_API_KEY')
-    if key:
-        return jsonify({"status": "Key loaded", "key_prefix": key[:10]})
-    else:
-        return jsonify({"status": "Key NOT loaded", "all_env": list(os.environ.keys())})
-
-
+    """Check whether an API key is configured (never reveals the key or other settings)"""
+    return jsonify({"status": "Key loaded" if os.getenv('ANTHROPIC_API_KEY') else "Key NOT loaded"})
 
 
 @app.route('/test-api', methods=['GET'])
@@ -179,7 +177,7 @@ def test_api():
     """Test if Anthropic API works"""
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5-5",
             max_tokens=100,
             messages=[{"role": "user", "content": "Say hello"}]
         )
@@ -532,5 +530,6 @@ def delete_booking(booking_id):
 
 import os
 
-port = int(os.environ.get('PORT', 10000))
-app.run(host='0.0.0.0', port=port)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
